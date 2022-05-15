@@ -47,7 +47,9 @@ namespace MediaEng {
         resizeImagesFactor_(4),
         enableDisplayPub_(true),
         framesPerSecond_(0),
-        imageFrameId_(0)
+        maskImages_(0.0),
+        imageFrameId_(0),
+        imageSize_(DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT)
         {
             RCLCPP_INFO(this->get_logger(), "%s started", node_name.c_str());
             
@@ -58,6 +60,10 @@ namespace MediaEng {
             this->declare_parameter<int>("resize_images_factor", resizeImagesFactor_);
             // Update downscaleImages int based on the parameter
             resizeImagesFactor_ = this->get_parameter("resize_images_factor").as_int();
+            if (resizeImages_){
+                imageSize_ = imageSize_ / resizeImagesFactor_.load();
+                RCLCPP_INFO(this->get_logger(), "Resizing images to [%d,%d]", imageSize_.width, imageSize_.height);
+            }
 
             this->declare_parameter<bool>("display_topic_enable", enableDisplayPub_);
             // Enable the Display Msg Topic
@@ -66,6 +72,15 @@ namespace MediaEng {
             this->declare_parameter<int>("fps", framesPerSecond_);
             // Set the number of FPS you want - if 0 then leave to camera
             framesPerSecond_ = this->get_parameter("fps").as_int();
+
+            this->declare_parameter<float>("mask_images", maskImages_);
+            // Fractional value of the picture to be masked black
+            maskImages_ = this->get_parameter("mask_images").as_double();
+            if (maskImages_ > 0.0) {
+                imageMask_ = cv::Mat::zeros(imageSize_,CV_8UC3);
+                cv::rectangle(imageMask_, cv::Point(0,imageSize_.height * maskImages_), cv::Point(imageSize_.width-1, imageSize_.height-1), cv::Scalar(255,255,255), -1);
+                RCLCPP_INFO(this->get_logger(), "Masking top %d pixels.", (int) (imageSize_.height * maskImages_));
+            }
 
             // Scan and load only valid streamers to Video Capture list.
             scanCameraIndex(cameraIdxList);
@@ -177,7 +192,10 @@ namespace MediaEng {
                     }
                     try {
                         if(resizeImages_) {
-                            cv::resize(frame, frame, cv::Size((int) DEFAULT_IMAGE_WIDTH / resizeImagesFactor_, (int) DEFAULT_IMAGE_HEIGHT / resizeImagesFactor_));
+                            cv::resize(frame, frame, imageSize_);
+                        }
+                        if(maskImages_ > 0.0) {
+                            cv::bitwise_and(frame, imageMask_, frame);
                         }
                         msg.images.push_back(*(cv_bridge::CvImage(header, "bgr8", frame).toImageMsg().get()));
                     }
@@ -214,6 +232,8 @@ namespace MediaEng {
         std::atomic<bool> enableDisplayPub_;       
         /// Int for defining the camera FPS.
         std::atomic<int> framesPerSecond_;              
+        /// Float to define the amount that the image shouold be masked.
+        std::atomic<float> maskImages_;              
         /// List of OpenCV video capture object used to retrieve frames from the cameras.
         std::vector<cv::VideoCapture> videoCaptureList_;
         /// List of valid camera indices identified after scanning.
@@ -224,6 +244,10 @@ namespace MediaEng {
         int cameraIndex_;
         /// Frame ID
         long imageFrameId_;
+        /// Image Mask
+        cv::Mat imageMask_;
+        /// Image Dimensions
+        cv::Size imageSize_;
     };
 }
 
