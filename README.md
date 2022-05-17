@@ -138,7 +138,9 @@ The `camera_pkg_launch.py` included in this package provides an example demonstr
 | `resize_images_factor` | Will downscale the image with a factor. Default is 4 to create 160 x 120 pixel image |
 | `fps` | Will limit the number of pictures per second that are captured. Default value is 0 which will let camera control frames per second | 
 | `display_topic_enable` | Set to true if you want to enable the `camera_pkg`/`display_mjpeg` topic |
-| `mask_images` | Set to a value > 0.0 to add a black rectangle on the images to block out background noise |
+| `mask_images` | Set to a value > 0.0 to add a rectangle on the images to block out background noise |
+| `mask_images_color` | Set to a value > 0.0 to define the gray tone of the mask |
+
 
 ## Node details
 

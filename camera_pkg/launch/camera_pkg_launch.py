@@ -30,6 +30,7 @@ def generate_launch_description():
                 {'resize_images_factor': 4},
                 {'fps': 0},
                 {'mask_images': 0.25},
+                {'mask_images_color': 0.50},
                 {'display_topic_enable': True}
             ]
         )

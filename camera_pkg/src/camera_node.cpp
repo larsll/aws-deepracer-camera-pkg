@@ -48,6 +48,7 @@ namespace MediaEng {
         enableDisplayPub_(true),
         framesPerSecond_(0),
         maskImages_(0.0),
+        maskImagesColor_(0.5),
         imageFrameId_(0),
         imageSize_(DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT)
         {
@@ -74,11 +75,18 @@ namespace MediaEng {
             framesPerSecond_ = this->get_parameter("fps").as_int();
 
             this->declare_parameter<float>("mask_images", maskImages_);
-            // Fractional value of the picture to be masked black
+            // Fractional value of the picture to be masked
             maskImages_ = this->get_parameter("mask_images").as_double();
+
+            this->declare_parameter<float>("mask_images_color", maskImagesColor_);
+            // Fractional value used to set the tone of the mas
+            maskImagesColor_ = this->get_parameter("mask_images_color").as_double();
+
+            uint8_t grayCh = (uint8_t) 255 * maskImagesColor_;
+            grayFrame_ = cv::Mat(imageSize_,CV_8UC3, cv::Scalar(grayCh, grayCh, grayCh));
+            imageMask_ = cv::Mat::zeros(imageSize_,CV_8UC3);
             if (maskImages_ > 0.0) {
-                imageMask_ = cv::Mat::zeros(imageSize_,CV_8UC3);
-                cv::rectangle(imageMask_, cv::Point(0,imageSize_.height * maskImages_), cv::Point(imageSize_.width-1, imageSize_.height-1), cv::Scalar(255,255,255), -1);
+                cv::rectangle(imageMask_, cv::Point(0, 0), cv::Point(imageSize_.width-1, imageSize_.height * maskImages_), cv::Scalar(255,255,255), -1);
                 RCLCPP_INFO(this->get_logger(), "Masking top %d pixels.", (int) (imageSize_.height * maskImages_));
             }
 
@@ -195,7 +203,8 @@ namespace MediaEng {
                             cv::resize(frame, frame, imageSize_);
                         }
                         if(maskImages_ > 0.0) {
-                            cv::bitwise_and(frame, imageMask_, frame);
+                            grayFrame_.copyTo(frame, imageMask_);
+                            // cv::bitwise_and(frame, imageMask_, frame);
                         }
                         msg.images.push_back(*(cv_bridge::CvImage(header, "bgr8", frame).toImageMsg().get()));
                     }
@@ -232,8 +241,10 @@ namespace MediaEng {
         std::atomic<bool> enableDisplayPub_;       
         /// Int for defining the camera FPS.
         std::atomic<int> framesPerSecond_;              
-        /// Float to define the amount that the image shouold be masked.
-        std::atomic<float> maskImages_;              
+        /// Float to define the amount that the image should be masked.
+        std::atomic<float> maskImages_;
+        /// Float to define the tone (grayscale of the mask).
+        std::atomic<float> maskImagesColor_;                   
         /// List of OpenCV video capture object used to retrieve frames from the cameras.
         std::vector<cv::VideoCapture> videoCaptureList_;
         /// List of valid camera indices identified after scanning.
@@ -248,6 +259,8 @@ namespace MediaEng {
         cv::Mat imageMask_;
         /// Image Dimensions
         cv::Size imageSize_;
+        /// Gray picture for masking
+        cv::Mat grayFrame_;
     };
 }
 
