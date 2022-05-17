@@ -27,7 +27,8 @@ def generate_launch_description():
             name='camera_node',
             parameters=[
                 {'resize_images': True},
-                {'resize_images_factor': 4},
+                {'resize_images_sensor_factor': 4.0},
+                {'resize_images_display_factor': 4.0},
                 {'fps': 0},
                 {'display_topic_enable': True}
             ]

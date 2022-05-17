@@ -44,7 +44,8 @@ namespace MediaEng {
         : Node(node_name),
         produceFrames_(false),
         resizeImages_(true),
-        resizeImagesFactor_(4),
+        resizeImagesSensorFactor_(4.0),
+        resizeImagesDisplayFactor_(4.0),
         enableDisplayPub_(true),
         framesPerSecond_(0),
         imageFrameId_(0)
@@ -55,9 +56,13 @@ namespace MediaEng {
             // Update resizeImages boolean based on the parameter
             resizeImages_ = this->get_parameter("resize_images").as_bool();
 
-            this->declare_parameter<int>("resize_images_factor", resizeImagesFactor_);
+            this->declare_parameter<int>("resize_images_factor", resizeImagesSensorFactor_);
             // Update downscaleImages int based on the parameter
-            resizeImagesFactor_ = this->get_parameter("resize_images_factor").as_int();
+            resizeImagesSensorFactor_ = this->get_parameter("resize_images_sensor_factor").as_double();
+
+            this->declare_parameter<int>("resize_images_factor", resizeImagesDisplayFactor_);
+            // Update downscaleImages int based on the parameter
+            resizeImagesDisplayFactor_ = this->get_parameter("resize_images_display_factor").as_double();
 
             this->declare_parameter<bool>("display_topic_enable", enableDisplayPub_);
             // Enable the Display Msg Topic
@@ -170,14 +175,18 @@ namespace MediaEng {
                         continue;
                     }
                     cv::Mat frame;
+                    cv::Mat disp_frame;
                     cap >> frame;
                     if (frame.empty()) {
                         RCLCPP_ERROR(this->get_logger(), "No frame returned. Check if camera is plugged in correctly.");
                         continue;
                     }
                     try {
+                        if(resizeImages_ && enableDisplayPub_) {
+                            cv::resize(frame, disp_frame, cv::Size((int) DEFAULT_IMAGE_WIDTH / resizeImagesDisplayFactor_, (int) DEFAULT_IMAGE_HEIGHT / resizeImagesDisplayFactor_));
+                        }
                         if(resizeImages_) {
-                            cv::resize(frame, frame, cv::Size((int) DEFAULT_IMAGE_WIDTH / resizeImagesFactor_, (int) DEFAULT_IMAGE_HEIGHT / resizeImagesFactor_));
+                            cv::resize(frame, frame, cv::Size((int) DEFAULT_IMAGE_WIDTH / resizeImagesSensorFactor_, (int) DEFAULT_IMAGE_HEIGHT / resizeImagesSensorFactor_));
                         }
                         msg.images.push_back(*(cv_bridge::CvImage(header, "bgr8", frame).toImageMsg().get()));
                     }
@@ -208,8 +217,10 @@ namespace MediaEng {
         std::atomic<bool> produceFrames_;
         /// Boolean to resize images.
         std::atomic<bool> resizeImages_;        
-        /// Factor (int) to downscale images.
-        std::atomic<int> resizeImagesFactor_;
+        /// Factor (double) to downscale images.
+        std::atomic<double> resizeImagesSensorFactor_;
+        /// Factor (double) to downscale images.
+        std::atomic<double> resizeImagesDisplayFactor_;        
         /// Boolean for enabling the display mpeg topic.
         std::atomic<bool> enableDisplayPub_;       
         /// Int for defining the camera FPS.
