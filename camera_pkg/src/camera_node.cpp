@@ -186,7 +186,6 @@ namespace MediaEng {
             while (produceFrames_) {
                 deepracer_interfaces_pkg::msg::CameraMsg msg;
                 std_msgs::msg::Header header;
-                header.stamp = this->get_clock()->now();
                 header.frame_id = std::to_string(imageFrameId_++);
                 for (auto& cap :  videoCaptureList_) {
                     if (!cap.isOpened()) {
@@ -194,6 +193,7 @@ namespace MediaEng {
                     }
                     cv::Mat frame;
                     cap >> frame;
+                    header.stamp = this->get_clock()->now();
                     if (frame.empty()) {
                         RCLCPP_ERROR(this->get_logger(), "No frame returned. Check if camera is plugged in correctly.");
                         continue;
